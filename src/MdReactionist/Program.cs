@@ -1,51 +1,52 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using Microsoft.Extensions.Configuration;
 
 namespace MdReactionist;
 
 public class Program
 {
-    private const string EmoteId = "<:md:1025013446682619966>";
-    
-    private static readonly ulong[] _triggeringUserIds = {
-        829016888846581812
-    };
-    private static readonly ulong[] _triggeringRoleIds = {
-        1098699786850422904
-    };
-    private static readonly string[] _triggeringStrings = {
-        "Michał", "Michała", "Michałowi", "Michałem", "Michale"
-    };
-
-    private static readonly DiscordSocketClient _client = new DiscordSocketClient(
-        new DiscordSocketConfig
-        {
-            GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
-        });
-    private static readonly IEmote _mdEmote = Emote.Parse(EmoteId);
-    
     public static async Task Main()
     {
         var token = Environment.GetEnvironmentVariable("MD_BOT_TOKEN");
-        await _client.LoginAsync(TokenType.Bot, token);
-        await _client.StartAsync();
+        if (string.IsNullOrEmpty(token))
+            throw new ArgumentException("Valid token is required for bot to work.");
 
-        _client.MessageReceived += async messageParam =>
+        var options = GetBotOptions();
+        var client  = new DiscordSocketClient(
+            new DiscordSocketConfig
+            {
+                GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
+            });
+        
+        await client.LoginAsync(TokenType.Bot, token);
+        await client.StartAsync();
+
+        client.MessageReceived += async messageParam =>
         {
             if (messageParam is not SocketUserMessage message)
                 return;
 
-            var isUserMentioned = message.MentionedUsers.Select(x => x.Id).Intersect(_triggeringUserIds).Any();
-            var isRoleMentioned = message.MentionedRoles.Select(x => x.Id).Intersect(_triggeringRoleIds).Any();
-            var isContainingString = _triggeringStrings.Any(x => message.Content.Contains(x));
+            var isUserMentioned = message.MentionedUsers.Select(x => x.Id).Intersect(options.TriggeringUserIds).Any();
+            var isRoleMentioned = message.MentionedRoles.Select(x => x.Id).Intersect(options.TriggeringRoleIds).Any();
+            var isContainingSubstring = options.TriggeringSubstrings.Any(x => message.Content.Contains(x, StringComparison.InvariantCultureIgnoreCase));
 
-            if (isUserMentioned || isRoleMentioned || isContainingString)
+            if (isUserMentioned || isRoleMentioned || isContainingSubstring)
             {
-                await message.AddReactionAsync(_mdEmote);
+                await message.AddReactionAsync(Emote.Parse(options.EmoteId));
             }
         };
 
         // block this task until the program is closed
         await Task.Delay(-1);
+    }
+
+    private static BotOptions GetBotOptions()
+    {
+        var builder = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json");
+        var config = builder.Build();
+        var botOptions = config.GetSection("BotOptions").Get<BotOptions>();
+
+        return botOptions ?? new BotOptions();
     }
 }
