@@ -5,11 +5,23 @@ namespace MdReactionist;
 
 public class Program
 {
-    private const ulong UserId = 829016888846581812;
-    private const ulong RoleId = 1098699786850422904;
     private const string EmoteId = "<:md:1025013446682619966>";
-        
-    private static readonly DiscordSocketClient _client = new DiscordSocketClient();
+    
+    private static readonly ulong[] _triggeringUserIds = {
+        829016888846581812
+    };
+    private static readonly ulong[] _triggeringRoleIds = {
+        1098699786850422904
+    };
+    private static readonly string[] _triggeringStrings = {
+        "Michał", "Michała", "Michałowi", "Michałem", "Michale"
+    };
+
+    private static readonly DiscordSocketClient _client = new DiscordSocketClient(
+        new DiscordSocketConfig
+        {
+            GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
+        });
     private static readonly IEmote _mdEmote = Emote.Parse(EmoteId);
     
     public static async Task Main()
@@ -23,7 +35,11 @@ public class Program
             if (messageParam is not SocketUserMessage message)
                 return;
 
-            if (message.MentionedUsers.Any(x => x.Id == UserId) || message.MentionedRoles.Any(x => x.Id == RoleId))
+            var isUserMentioned = message.MentionedUsers.Select(x => x.Id).Intersect(_triggeringUserIds).Any();
+            var isRoleMentioned = message.MentionedRoles.Select(x => x.Id).Intersect(_triggeringRoleIds).Any();
+            var isContainingString = _triggeringStrings.Any(x => message.Content.Contains(x));
+
+            if (isUserMentioned || isRoleMentioned || isContainingString)
             {
                 await message.AddReactionAsync(_mdEmote);
             }
