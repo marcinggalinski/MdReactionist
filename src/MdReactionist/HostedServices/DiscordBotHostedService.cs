@@ -84,7 +84,8 @@ public class DiscordBotHostedService : IHostedService, IDisposable
             if (nextWhitespace != default(char))
                 correctionEnd = index + msg.Content[index..].IndexOf(nextWhitespace);
 
-            var correction = $"*{msg.Content[correctionStart..correctionEnd].Replace(options.StringToCorrect, options.CorrectedString)}";
+            var correctedString = options.BoldCorrection ? $"**{options.CorrectedString}**" : options.CorrectedString;
+            var correction = $"*{msg.Content[correctionStart..correctionEnd].Replace(options.StringToCorrect, correctedString)}";
             await msg.ReplyAsync(correction);
         }
     }

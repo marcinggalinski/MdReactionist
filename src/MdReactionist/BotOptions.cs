@@ -19,4 +19,5 @@ public class Correction
 {
     public string? StringToCorrect { get; set; }
     public string? CorrectedString { get; set; }
+    public bool BoldCorrection { get; set; }
 }
