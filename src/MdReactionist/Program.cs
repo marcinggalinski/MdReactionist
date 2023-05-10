@@ -1,66 +1,39 @@
-﻿using Discord;
+using Discord;
 using Discord.WebSocket;
-using Microsoft.Extensions.Configuration;
+using MdReactionist;
+using MdReactionist.HostedServices;
 
-namespace MdReactionist;
+var builder = WebApplication.CreateBuilder(args);
 
-public class Program
-{
-    private static BotOptions _options = new BotOptions();
-    
-    public static async Task Main()
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+builder.Services.Configure<BotOptions>(builder.Configuration.GetSection("BotOptions"));
+builder.Services.AddSingleton(
+    _ =>
     {
-        var token = Environment.GetEnvironmentVariable("MD_BOT_TOKEN");
-        if (string.IsNullOrEmpty(token))
-            throw new ArgumentException("Valid token is required for bot to work.");
-
-        _options = GetBotOptions();
-        var client  = new DiscordSocketClient(
+        var client = new DiscordSocketClient(
             new DiscordSocketConfig
             {
                 GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
             });
-        
-        await client.LoginAsync(TokenType.Bot, token);
-        await client.StartAsync();
+        var token = Environment.GetEnvironmentVariable("MD_BOT_TOKEN");
+        client.LoginAsync(TokenType.Bot, token).Wait();
+        client.StartAsync().Wait();
 
-        client.MessageReceived += AddReaction;
+        return client;
+    });
 
-        // block this task until the program is closed
-        await Task.Delay(-1);
-    }
+builder.Services.AddHostedService<DiscordBotHostedService>();
 
-    private static BotOptions GetBotOptions()
-    {
-        var builder = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json");
-        var config = builder.Build();
-        var botOptions = config.GetSection("BotOptions").Get<BotOptions>();
+var app = builder.Build();
 
-        return botOptions ?? new BotOptions();
-    }
+app.UseSwagger();
+app.UseSwaggerUI();
 
-    private static async Task AddReaction(SocketMessage message)
-    {
-        if (message is not SocketUserMessage msg)
-            return;
+app.UseHttpsRedirection();
+app.UseAuthorization();
+app.MapControllers();
 
-        foreach (var options in _options.EmoteReactions)
-        {
-            // manual check for mentions in message content to ignore replies, which are treated the same as mentions in SocketMessage
-            var isUserMentioned = options.TriggeringUserIds.Select(x => $"<@{x}>")
-                .Any(x => msg.Content.Contains(x, StringComparison.InvariantCultureIgnoreCase));
-            var isRoleMentioned = options.TriggeringRoleIds.Select(x => $"<@&{x}>")
-                .Any(x => msg.Content.Contains(x, StringComparison.InvariantCultureIgnoreCase));
-            var isContainingSubstring = options.TriggeringSubstrings.Any(x => msg.Content.Contains(x, StringComparison.InvariantCultureIgnoreCase));
-
-            
-            if (isUserMentioned || isRoleMentioned || isContainingSubstring)
-            {
-                if (options.EmoteId is not null)
-                    await msg.AddReactionAsync(Emote.Parse(options.EmoteId));
-                else if (options.Emoji is not null)
-                    await msg.AddReactionAsync(new Emoji(options.Emoji));
-            }
-        }
-    }
-}
+app.Run();
