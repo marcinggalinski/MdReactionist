@@ -8,8 +8,8 @@ public class BotOptions
     
 public class EmoteReactions
 {
-    public string? EmoteId { get; set; }
-    public string? Emoji { get; set; }
+    public string[] EmoteIds { get; set; } = Array.Empty<string>();
+    public string[] Emojis { get; set; } = Array.Empty<string>();
     public ulong[] TriggeringUserIds { get; set; } = Array.Empty<ulong>();
     public ulong[] TriggeringRoleIds { get; set; } = Array.Empty<ulong>();
     public string[] TriggeringSubstrings { get; set; } = Array.Empty<string>();

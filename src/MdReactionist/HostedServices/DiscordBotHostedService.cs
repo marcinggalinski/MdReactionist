@@ -51,10 +51,8 @@ public class DiscordBotHostedService : IHostedService, IDisposable
 
             if (isUserMentioned || isRoleMentioned || isContainingSubstring)
             {
-                if (options.EmoteId is not null)
-                    await msg.AddReactionAsync(Emote.Parse(options.EmoteId));
-                else if (options.Emoji is not null)
-                    await msg.AddReactionAsync(new Emoji(options.Emoji));
+                await msg.AddReactionsAsync(options.EmoteIds.Select(Emote.Parse));
+                await msg.AddReactionsAsync(options.Emojis.Select(x => new Emoji(x)));
             }
         }
     }
