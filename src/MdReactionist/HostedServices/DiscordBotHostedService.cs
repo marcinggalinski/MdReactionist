@@ -42,11 +42,22 @@ public class DiscordBotHostedService : IHostedService, IDisposable
 
         foreach (var options in _options.EmoteReactions)
         {
-            // manual check for mentions in message content to ignore replies, which are treated the same as mentions in SocketMessage
-            var isUserMentioned = options.TriggeringUserIds.Select(x => $"<@{x}>")
-                .Any(x => msg.Content.Contains(x, StringComparison.InvariantCultureIgnoreCase));
-            var isRoleMentioned = options.TriggeringRoleIds.Select(x => $"<@&{x}>")
-                .Any(x => msg.Content.Contains(x, StringComparison.InvariantCultureIgnoreCase));
+            bool isUserMentioned;
+            bool isRoleMentioned;
+
+            if (options.IgnoreReplies)
+            {
+                // manual check for mentions in message content to ignore replies, which are treated the same as mentions in SocketMessage
+                isUserMentioned = options.TriggeringUserIds.Select(x => $"<@{x}>")
+                    .Any(x => msg.Content.Contains(x, StringComparison.InvariantCultureIgnoreCase));
+                isRoleMentioned = options.TriggeringRoleIds.Select(x => $"<@&{x}>")
+                    .Any(x => msg.Content.Contains(x, StringComparison.InvariantCultureIgnoreCase));
+            }
+            else
+            {
+                isUserMentioned = msg.MentionedUsers.Select(x => x.Id).Intersect(options.TriggeringUserIds).Any();
+                isRoleMentioned = msg.MentionedRoles.Select(x => x.Id).Intersect(options.TriggeringRoleIds).Any();
+            }
             var isContainingSubstring = options.TriggeringSubstrings.Any(x => msg.Content.Contains(x, StringComparison.InvariantCultureIgnoreCase));
 
             if (isUserMentioned || isRoleMentioned || isContainingSubstring)

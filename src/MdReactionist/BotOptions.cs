@@ -2,17 +2,18 @@
 
 public class BotOptions
 {
-    public EmoteReactions[] EmoteReactions { get; set; } = Array.Empty<EmoteReactions>();
+    public EmoteReaction[] EmoteReactions { get; set; } = Array.Empty<EmoteReaction>();
     public Correction[] Corrections { get; set; } = Array.Empty<Correction>();
 }
     
-public class EmoteReactions
+public class EmoteReaction
 {
     public string[] EmoteIds { get; set; } = Array.Empty<string>();
     public string[] Emojis { get; set; } = Array.Empty<string>();
     public ulong[] TriggeringUserIds { get; set; } = Array.Empty<ulong>();
     public ulong[] TriggeringRoleIds { get; set; } = Array.Empty<ulong>();
     public string[] TriggeringSubstrings { get; set; } = Array.Empty<string>();
+    public bool IgnoreReplies { get; set; } = true;
 }
 
 public class Correction
