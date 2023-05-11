@@ -2,6 +2,7 @@
 
 public class BotOptions
 {
+    public Logging? Logging { get; set; }
     public EmoteReaction[] EmoteReactions { get; set; } = Array.Empty<EmoteReaction>();
     public Correction[] Corrections { get; set; } = Array.Empty<Correction>();
 }
@@ -21,4 +22,10 @@ public class Correction
     public string? StringToCorrect { get; set; }
     public string? CorrectedString { get; set; }
     public bool BoldCorrection { get; set; }
+}
+
+public class Logging
+{
+    public ulong ServerId { get; set; }
+    public ulong ChannelId { get; set; }
 }

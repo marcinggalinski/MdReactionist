@@ -31,6 +31,10 @@ Everything else, i.e. actions configuration, is contained in `BotOptions` object
 ```json
 {
   "BotOptions": {
+    "Logging": {
+        "ServerId": 123,
+        "ChannelId": 123
+    }
     "EmoteReactions": [
       {
         "EmoteId": [
@@ -78,6 +82,8 @@ Everything else, i.e. actions configuration, is contained in `BotOptions` object
   }
 }
 ```
+
+`Logging` is an object, which, if present, contains information on where to send logs (e.g. "Bot started" or errors) via Discord.
 
 Both `EmoteReactions` and `Corrections` are arrays of objects, as you can have multiple rules for each action. They will work independently from each other, i.e. each one will be run on every message received by bot, regardless of whether any of the previous ones ended up in any action on the server.
 

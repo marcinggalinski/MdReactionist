@@ -1,11 +1,10 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.Options;
-using System.Text.RegularExpressions;
 
 namespace MdReactionist.HostedServices;
 
-public class DiscordBotHostedService : IHostedService, IDisposable
+public class DiscordBotHostedService : IHostedService
 {
     private readonly BotOptions _options;
     private readonly DiscordSocketClient _client;
@@ -16,11 +15,13 @@ public class DiscordBotHostedService : IHostedService, IDisposable
         _client = client;
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
         _client.MessageReceived += AddReaction;
         _client.MessageReceived += Correct;
-        return Task.CompletedTask;
+
+        if (_options.Logging is not null)
+            await _client.GetGuild(_options.Logging.ServerId).GetTextChannel(_options.Logging.ChannelId).SendMessageAsync("Bot started");
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
@@ -28,12 +29,9 @@ public class DiscordBotHostedService : IHostedService, IDisposable
         _client.MessageReceived -= AddReaction;
         _client.MessageReceived -= Correct;
 
-        await _client.StopAsync();
-        await _client.LogoutAsync();
+        if (_options.Logging is not null)
+            await _client.GetGuild(_options.Logging.ServerId).GetTextChannel(_options.Logging.ChannelId).SendMessageAsync("Bot stopped");
     }
-
-    public void Dispose()
-    { }
 
     private async Task AddReaction(SocketMessage message)
     {
