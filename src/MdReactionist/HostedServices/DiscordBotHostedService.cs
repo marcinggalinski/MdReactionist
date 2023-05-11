@@ -9,19 +9,25 @@ public class DiscordBotHostedService : IHostedService
     private readonly BotOptions _options;
     private readonly DiscordSocketClient _client;
 
-    public DiscordBotHostedService(IOptions<BotOptions> options, DiscordSocketClient client)
+    public DiscordBotHostedService(IOptions<BotOptions> options)
     {
         _options = options.Value;
-        _client = client;
+        _client = new DiscordSocketClient(
+            new DiscordSocketConfig
+            {
+                GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
+            });
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        _client.Ready += LogBotStart;
         _client.MessageReceived += AddReaction;
         _client.MessageReceived += Correct;
 
-        if (_options.Logging is not null)
-            await _client.GetGuild(_options.Logging.ServerId).GetTextChannel(_options.Logging.ChannelId).SendMessageAsync("Bot started");
+        var token = Environment.GetEnvironmentVariable("MD_BOT_TOKEN");
+        await _client.LoginAsync(TokenType.Bot, token);
+        await _client.StartAsync();
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
@@ -31,6 +37,16 @@ public class DiscordBotHostedService : IHostedService
 
         if (_options.Logging is not null)
             await _client.GetGuild(_options.Logging.ServerId).GetTextChannel(_options.Logging.ChannelId).SendMessageAsync("Bot stopped");
+
+        await _client.StopAsync();
+        await _client.LogoutAsync();
+    }
+
+    private async Task LogBotStart()
+    {
+        if (_options.Logging is not null)
+            await _client.GetGuild(_options.Logging.ServerId).GetTextChannel(_options.Logging.ChannelId).SendMessageAsync("Bot started");
+        _client.Ready -= LogBotStart;
     }
 
     private async Task AddReaction(SocketMessage message)

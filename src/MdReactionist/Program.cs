@@ -1,5 +1,3 @@
-using Discord;
-using Discord.WebSocket;
 using MdReactionist;
 using MdReactionist.HostedServices;
 
@@ -10,20 +8,6 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.Configure<BotOptions>(builder.Configuration.GetSection("BotOptions"));
-builder.Services.AddSingleton(
-    _ =>
-    {
-        var client = new DiscordSocketClient(
-            new DiscordSocketConfig
-            {
-                GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
-            });
-        var token = Environment.GetEnvironmentVariable("MD_BOT_TOKEN");
-        client.LoginAsync(TokenType.Bot, token).Wait();
-        client.StartAsync().Wait();
-
-        return client;
-    });
 
 builder.Services.AddHostedService<DiscordBotHostedService>();
 
