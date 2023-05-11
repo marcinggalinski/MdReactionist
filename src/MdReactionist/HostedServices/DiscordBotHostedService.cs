@@ -8,6 +8,7 @@ public class DiscordBotHostedService : IHostedService
 {
     private readonly BotOptions _options;
     private readonly DiscordSocketClient _client;
+    private readonly Random _random = new Random();
 
     public DiscordBotHostedService(IOptions<BotOptions> options)
     {
@@ -110,6 +111,24 @@ public class DiscordBotHostedService : IHostedService
             var correctedString = options.BoldCorrection ? $"**{options.CorrectedString}**" : options.CorrectedString;
             var correction = $"*{msg.Content[correctionStart..correctionEnd].Replace(options.StringToCorrect, correctedString)}";
             await msg.ReplyAsync(correction);
+        }
+    }
+    
+    private async Task RandomReply(SocketMessage message)
+    {
+        if (message is not SocketUserMessage msg)
+            return;
+
+        foreach (var options in _options.RandomReplies)
+        {
+            if (msg.Author.Id != options.TriggeringUserId)
+                continue;
+
+            if (_random.NextSingle() > options.Probability)
+                continue;
+
+            var reply = options.Replies[_random.Next(options.Replies.Length)];
+            await msg.ReplyAsync(reply);
         }
     }
 }

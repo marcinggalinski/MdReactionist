@@ -5,6 +5,13 @@ public class BotOptions
     public Logging? Logging { get; set; }
     public EmoteReaction[] EmoteReactions { get; set; } = Array.Empty<EmoteReaction>();
     public Correction[] Corrections { get; set; } = Array.Empty<Correction>();
+    public RandomReply[] RandomReplies { get; set; } = Array.Empty<RandomReply>();
+}
+
+public class Logging
+{
+    public ulong ServerId { get; set; }
+    public ulong ChannelId { get; set; }
 }
     
 public class EmoteReaction
@@ -24,8 +31,9 @@ public class Correction
     public bool BoldCorrection { get; set; }
 }
 
-public class Logging
+public class RandomReply
 {
-    public ulong ServerId { get; set; }
-    public ulong ChannelId { get; set; }
+    public ulong TriggeringUserId { get; set; }
+    public float Probability { get; set; }
+    public string[] Replies { get; set; } = Array.Empty<string>();
 }
