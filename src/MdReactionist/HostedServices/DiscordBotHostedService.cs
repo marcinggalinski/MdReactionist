@@ -25,6 +25,7 @@ public class DiscordBotHostedService : IHostedService
         _client.Ready += LogBotStart;
         _client.MessageReceived += AddReaction;
         _client.MessageReceived += Correct;
+        _client.MessageReceived += RandomReply;
 
         var token = Environment.GetEnvironmentVariable("MD_BOT_TOKEN");
         await _client.LoginAsync(TokenType.Bot, token);
@@ -35,6 +36,7 @@ public class DiscordBotHostedService : IHostedService
     {
         _client.MessageReceived -= AddReaction;
         _client.MessageReceived -= Correct;
+        _client.MessageReceived -= RandomReply;
 
         if (_options.Logging is not null)
             await _client.GetGuild(_options.Logging.ServerId).GetTextChannel(_options.Logging.ChannelId).SendMessageAsync("Bot stopped");
