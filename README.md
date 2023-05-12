@@ -78,18 +78,37 @@ Everything else, i.e. actions configuration, is contained in `BotOptions` object
         "CorrectedString": "correct_string2",
         "BoldCorrection": true
       }
+    ],
+    "RandomReplies": [
+      {
+        "TriggeringUserIds": [
+          123
+        ],
+        "Probability": 0.5,
+        "Replies": [
+          "reply1",
+          "reply2",
+          "reply3"
+        ]
+      }
     ]
   }
 }
 ```
 
+`Logging` is an object, wheras all other options are arrays of objects, each object configuring a rule of a specific action. Rules work independently from each other, i.e. each one will be run on every message received by bot, regardless of whether any of the previous ones ended up in any action on the server.
+
+## Logging
+
 `Logging` is an object, which, if present, contains information on where to send logs (e.g. "Bot started" or errors) via Discord.
 
-Both `EmoteReactions` and `Corrections` are arrays of objects, as you can have multiple rules for each action. They will work independently from each other, i.e. each one will be run on every message received by bot, regardless of whether any of the previous ones ended up in any action on the server.
+## EmoteReactions
 
 `EmoteReactions` is a set of rules that trigger bot to react with a specified emojis or emotes (emoji is a standard Unicode emoticon thingy, while emote is a custom one added to the server), based on user or role mentioned in message, or string contained in message. Each rule can cause any number of emote and emoji reaction. By default, replies are not treated as mentions, although it can be changed using `IgnoreReplies` option.
 
 Emojis can be copied from Discord (or anywhere else, as long as it's supported by Discord) and pasted into the config file. You can get emote id by sending `\:emote_name:` in Discord (i.e. the same as you would normally do to send an emote, but prefixed with a backslash '\\'). In the same manner you can get user id and role id - just mention it as you normally would, but prefix with a backslash '\\', e.g. `\@john.wick`.
+
+## Corrections
 
 `Corrections` is a set of rules that trigger bot to reply with a correction, i.e. `*<corrected_string>` message. Each rule causes up to one reply to be sent. Note, that `StringToCorrect` does not have to be a separate word, but rather a substring in message, e.g. "swimming" will trigger a rule with `StringToCorrect` equal "ing". The bot will replace incorrect part with `CorrectedString`, but will only produce one word, though. For example, for `StringToCorrect` equal "arch" and `CorrectedString` equal "Arch", it will reply:
 
@@ -99,6 +118,10 @@ Emojis can be copied from Discord (or anywhere else, as long as it's supported b
 - "*mArch" to "march"
 
 There is an additional option `BoldCorrection` that causes bot to wrap `CorrectedString` in double asterisks '*', which Discord displays as bolded text.
+
+## RandomReplies
+
+`RandomReplies` is a set of rules that trigger bot to reply to specified users with a text chosen randomly from specified ones, and with a specified probability. If no user ids are specified (e.g. `TriggeringUsersIds` is omitted), no check on author is performed and bot replies (still with a specified probability) to anyone, including itself.
 
 # Credits
 

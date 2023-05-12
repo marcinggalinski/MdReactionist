@@ -128,7 +128,7 @@ public class DiscordBotHostedService : IHostedService
 
         foreach (var options in _options.RandomReplies)
         {
-            if (msg.Author.Id != options.TriggeringUserId)
+            if (options.TriggeringUserIds.Length > 0 && !options.TriggeringUserIds.Contains(msg.Author.Id))
                 continue;
 
             if (_random.NextSingle() > options.Probability)

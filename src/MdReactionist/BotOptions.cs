@@ -33,7 +33,7 @@ public class Correction
 
 public class RandomReply
 {
-    public ulong TriggeringUserId { get; set; }
+    public ulong[] TriggeringUserIds { get; set; } = Array.Empty<ulong>();
     public float Probability { get; set; }
     public string[] Replies { get; set; } = Array.Empty<string>();
 }
