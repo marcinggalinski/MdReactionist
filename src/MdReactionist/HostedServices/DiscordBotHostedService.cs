@@ -10,6 +10,11 @@ public class DiscordBotHostedService : IHostedService
     private readonly DiscordSocketClient _client;
     private readonly Random _random = new Random();
 
+    private readonly IReadOnlyList<char> _charsToSkip = new []
+    {
+        '`', '~', '!', '^', '&', '*', '(', ')', '+', '=', ':', ';', ',', '.', '[', ']', '{', '}', '\\', '/', '|'
+    };
+
     public DiscordBotHostedService(IOptions<BotOptions> options)
     {
         _options = options.Value;
@@ -102,13 +107,13 @@ public class DiscordBotHostedService : IHostedService
             var correctionStart = 0;
             var correctionEnd = msg.Content.Length;
 
-            var prevWhitespace = msg.Content[..index].LastOrDefault(char.IsWhiteSpace);
-            if (prevWhitespace != default(char))
-                correctionStart = msg.Content[..index].LastIndexOf(prevWhitespace) + 1;
+            var prevOmitted = msg.Content[..index].LastOrDefault(x => char.IsWhiteSpace(x) || _charsToSkip.Contains(x));
+            if (prevOmitted != default(char))
+                correctionStart = msg.Content[..index].LastIndexOf(prevOmitted) + 1;
 
-            var nextWhitespace = msg.Content[index..].FirstOrDefault(char.IsWhiteSpace);
-            if (nextWhitespace != default(char))
-                correctionEnd = index + msg.Content[index..].IndexOf(nextWhitespace);
+            var nextOmitted = msg.Content[(index + options.StringToCorrect.Length)..].FirstOrDefault(x => char.IsWhiteSpace(x) || _charsToSkip.Contains(x));
+            if (nextOmitted != default(char))
+                correctionEnd = index + msg.Content[index..].IndexOf(nextOmitted);
 
             var correctedString = options.BoldCorrection ? $"**{options.CorrectedString}**" : options.CorrectedString;
             var correction = $"*{msg.Content[correctionStart..correctionEnd].Replace(options.StringToCorrect, correctedString)}";
