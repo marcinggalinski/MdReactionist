@@ -100,23 +100,23 @@ public class DiscordBotHostedService : IHostedService
             if (string.IsNullOrEmpty(options.StringToCorrect) || string.IsNullOrEmpty(options.StringToCorrect))
                 continue;
             
-            var index = msg.Content.IndexOf(options.StringToCorrect, StringComparison.InvariantCulture);
+            var index = msg.CleanContent.IndexOf(options.StringToCorrect, StringComparison.InvariantCulture);
             if (index == -1)
                 continue;
 
             var correctionStart = 0;
-            var correctionEnd = msg.Content.Length;
+            var correctionEnd = msg.CleanContent.Length;
 
-            var prevOmitted = msg.Content[..index].LastOrDefault(x => char.IsWhiteSpace(x) || _charsToSkip.Contains(x));
+            var prevOmitted = msg.CleanContent[..index].LastOrDefault(x => char.IsWhiteSpace(x) || _charsToSkip.Contains(x));
             if (prevOmitted != default(char))
-                correctionStart = msg.Content[..index].LastIndexOf(prevOmitted) + 1;
+                correctionStart = msg.CleanContent[..index].LastIndexOf(prevOmitted) + 1;
 
-            var nextOmitted = msg.Content[(index + options.StringToCorrect.Length)..].FirstOrDefault(x => char.IsWhiteSpace(x) || _charsToSkip.Contains(x));
+            var nextOmitted = msg.CleanContent[(index + options.StringToCorrect.Length)..].FirstOrDefault(x => char.IsWhiteSpace(x) || _charsToSkip.Contains(x));
             if (nextOmitted != default(char))
-                correctionEnd = index + msg.Content[index..].IndexOf(nextOmitted);
+                correctionEnd = index + msg.CleanContent[index..].IndexOf(nextOmitted);
 
             var correctedString = options.BoldCorrection ? $"**{options.CorrectedString}**" : options.CorrectedString;
-            var correction = $"*{msg.Content[correctionStart..correctionEnd].Replace(options.StringToCorrect, correctedString)}";
+            var correction = $"*{msg.CleanContent[correctionStart..index]}{correctedString}{msg.CleanContent[(index + options.StringToCorrect.Length)..correctionEnd]}";
             await msg.ReplyAsync(correction);
         }
     }
