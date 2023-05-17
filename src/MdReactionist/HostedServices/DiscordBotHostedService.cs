@@ -71,16 +71,16 @@ public class DiscordBotHostedService : IHostedService
             {
                 // manual check for mentions in message content to ignore replies, which are treated the same as mentions in SocketMessage
                 isUserMentioned = options.TriggeringUserIds.Select(x => $"<@{x}>")
-                    .Any(x => msg.Content.Contains(x, StringComparison.InvariantCultureIgnoreCase));
+                    .Any(x => msg.Content.Contains(x, StringComparison.OrdinalIgnoreCase));
                 isRoleMentioned = options.TriggeringRoleIds.Select(x => $"<@&{x}>")
-                    .Any(x => msg.Content.Contains(x, StringComparison.InvariantCultureIgnoreCase));
+                    .Any(x => msg.Content.Contains(x, StringComparison.OrdinalIgnoreCase));
             }
             else
             {
                 isUserMentioned = msg.MentionedUsers.Select(x => x.Id).Intersect(options.TriggeringUserIds).Any();
                 isRoleMentioned = msg.MentionedRoles.Select(x => x.Id).Intersect(options.TriggeringRoleIds).Any();
             }
-            var isContainingSubstring = options.TriggeringSubstrings.Any(x => msg.Content.Contains(x, StringComparison.InvariantCultureIgnoreCase));
+            var isContainingSubstring = options.TriggeringSubstrings.Any(x => msg.Content.Contains(x, StringComparison.OrdinalIgnoreCase));
 
             if (isUserMentioned || isRoleMentioned || isContainingSubstring)
             {
@@ -100,7 +100,7 @@ public class DiscordBotHostedService : IHostedService
             if (string.IsNullOrEmpty(options.StringToCorrect) || string.IsNullOrEmpty(options.StringToCorrect))
                 continue;
             
-            var index = msg.CleanContent.IndexOf(options.StringToCorrect, StringComparison.InvariantCulture);
+            var index = msg.CleanContent.IndexOf(options.StringToCorrect, StringComparison.Ordinal);
             if (index == -1)
                 continue;
 
