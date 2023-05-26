@@ -105,7 +105,7 @@ public class DiscordBotHostedService : IHostedService
     {
         var mention = $"@{_client.CurrentUser.Username}#{_client.CurrentUser.DiscriminatorValue}";
         _eventReminderRegex = new Regex(
-            @$"^{mention} (?<name>\w+) dnia (?<date>\d{{4}}-\d{{2}}-\d{{2}}) o (?<time>\d{{2}}:\d{{2}})$",
+            @$"^{mention} (?<name>.+) dnia (?<date>\d{{4}}-\d{{2}}-\d{{2}}) o (?<time>\d{{2}}:\d{{2}})$",
             RegexOptions.Compiled);
 
         _client.Ready -= LogBotStart;
@@ -217,8 +217,8 @@ public class DiscordBotHostedService : IHostedService
                 1 => $"{reminder.EventName} już za 1 dzień!",
                 0 => reminder.RemainingTime.Hours switch
                 {
-                    (<= 24 and >= 22) or (<= 4 and >= 2) => $"{reminder.EventName} już za {reminder.RemainingTime.Days} godziny!",
-                    <= 21 and >= 5 => $"{reminder.EventName} już za {reminder.RemainingTime.Days} godzin!",
+                    (<= 24 and >= 22) or (<= 4 and >= 2) => $"{reminder.EventName} już za {reminder.RemainingTime.Hours} godziny!",
+                    <= 21 and >= 5 => $"{reminder.EventName} już za {reminder.RemainingTime.Hours} godzin!",
                     1 => $"{reminder.EventName} już za 1 godzinę!",
                     0 => reminder.RemainingTime.Minutes switch
                     {
@@ -281,11 +281,14 @@ public class DiscordBotHostedService : IHostedService
         
         foreach (var timeSpan in _timeSpans)
         {
-            if (eventDateTime - DateTime.Now < timeSpan)
+            var now = TimeZoneInfo.ConvertTime(DateTime.Now, TimeZoneInfo.FindSystemTimeZoneById("Central European Time"));
+            now = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, 0);
+            
+            if (eventDateTime - now < timeSpan)
                 continue;
             
             var reminder = new EventReminder(msg.Channel.Id, eventName, timeSpan);
-            var _ = new Timer(SendEventReminder, reminder, (eventDateTime - DateTime.Now).Subtract(timeSpan), Timeout.InfiniteTimeSpan);
+            var _ = new Timer(SendEventReminder, reminder, (eventDateTime - now).Subtract(timeSpan), Timeout.InfiniteTimeSpan);
         }
 
         await msg.AddReactionAsync(new Emoji("✅"));
