@@ -6,7 +6,7 @@ public class BotOptions
     public EmoteReaction[] EmoteReactions { get; set; } = Array.Empty<EmoteReaction>();
     public Correction[] Corrections { get; set; } = Array.Empty<Correction>();
     public RandomReply[] RandomReplies { get; set; } = Array.Empty<RandomReply>();
-    public ulong[] ReminderPermittedUserIds { get; set; } = Array.Empty<ulong>();
+    public EventReminders EventReminders { get; set; } = new EventReminders();
 }
 
 public class Logging
@@ -37,4 +37,10 @@ public class RandomReply
     public ulong[] TriggeringUserIds { get; set; } = Array.Empty<ulong>();
     public float Probability { get; set; }
     public string[] Replies { get; set; } = Array.Empty<string>();
+}
+
+public class EventReminders
+{
+    public ulong[] PermittedUserIds { get; set; } = Array.Empty<ulong>();
+    public int TimeZoneOffset { get; set; }
 }

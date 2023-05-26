@@ -235,6 +235,7 @@ public class DiscordBotHostedService : IHostedService
             };
 
             await channel.SendMessageAsync(text);
+            await reminder.Timer!.DisposeAsync();
         }
         
         if (message is not SocketUserMessage msg)
@@ -246,7 +247,7 @@ public class DiscordBotHostedService : IHostedService
         if (!_eventReminderRegex.IsMatch(msg.CleanContent))
             return;
 
-        if (!_options.ReminderPermittedUserIds.Contains(msg.Author.Id))
+        if (!_options.EventReminders.PermittedUserIds.Contains(msg.Author.Id))
         {
             await msg.ReplyAsync("Rejected.");
             return;
@@ -281,19 +282,22 @@ public class DiscordBotHostedService : IHostedService
         
         foreach (var timeSpan in _timeSpans)
         {
-            var now = TimeZoneInfo.ConvertTime(DateTime.Now, TimeZoneInfo.FindSystemTimeZoneById("Central European Time"));
-            now = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, 0);
-            
+            var now = DateTime.UtcNow.AddHours(_options.EventReminders.TimeZoneOffset);
             if (eventDateTime - now < timeSpan)
                 continue;
             
             var reminder = new EventReminder(msg.Channel.Id, eventName, timeSpan);
-            var _ = new Timer(SendEventReminder, reminder, (eventDateTime - now).Subtract(timeSpan), Timeout.InfiniteTimeSpan);
+            var timer = new Timer(SendEventReminder, reminder, (eventDateTime - now).Subtract(timeSpan), Timeout.InfiniteTimeSpan);
+
+            reminder.Timer = timer;
         }
 
         await msg.AddReactionAsync(new Emoji("✅"));
     }
 
-    private record EventReminder(ulong ChannelId, string EventName, TimeSpan RemainingTime);
+    private record EventReminder(ulong ChannelId, string EventName, TimeSpan RemainingTime)
+    {
+        public Timer? Timer { get; set; }
+    }
 }
 
