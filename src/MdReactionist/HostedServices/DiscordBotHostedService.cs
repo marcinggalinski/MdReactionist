@@ -2,6 +2,8 @@
 using Discord.WebSocket;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
+using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace MdReactionist.HostedServices;
@@ -10,6 +12,7 @@ public class DiscordBotHostedService : IHostedService
 {
     private readonly BotOptions _options;
     private readonly DiscordSocketClient _client;
+    private readonly HttpClient _http = new HttpClient();
     private readonly Random _random = new Random();
 
     private readonly IReadOnlyCollection<char> _charsToSkip = new []
@@ -76,6 +79,7 @@ public class DiscordBotHostedService : IHostedService
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         _client.Ready += SetUpRegex;
+        _client.Ready += SetUpSubredditReports;
         _client.Ready += LogBotStart;
         _client.MessageReceived += AddReaction;
         _client.MessageReceived += Correct;
@@ -108,7 +112,52 @@ public class DiscordBotHostedService : IHostedService
             @$"^{mention} (?<name>.+) dnia (?<date>\d{{4}}-\d{{2}}-\d{{2}}) o (?<time>\d{{2}}:\d{{2}})$",
             RegexOptions.Compiled);
 
-        _client.Ready -= LogBotStart;
+        _client.Ready -= SetUpRegex;
+        return Task.CompletedTask;
+    }
+
+    private Task SetUpSubredditReports()
+    {
+        async void ReportSubreddit(object? state)
+        {
+            if (state is not SubredditReport report)
+                return;
+
+            if (_client.GetChannel(report.ChannelId) is not SocketTextChannel channel)
+                return;
+
+            var response = await _http.GetAsync($"https://reddit.com/r/{report.Subreddit}.json");
+            var content = await response.Content.ReadAsStreamAsync();
+            var json = await JsonDocument.ParseAsync(content);
+
+            var posts = json.RootElement.GetProperty("data").GetProperty("children");
+            for (var i = 0; i < report.Count; i++)
+            {
+                var post = posts[i];
+                var title = post.GetProperty("title");
+                var url = post.GetProperty("url");
+                var score = post.GetProperty("score");
+                var author = post.GetProperty("author");
+
+                var sb = new StringBuilder();
+                sb.AppendLine($"[{score}] **{title}** by {author}");
+                sb.Append(url);
+
+                await channel.SendMessageAsync(sb.ToString());
+            }
+        }
+        
+        foreach (var options in _options.SubredditReports)
+        {
+            var now = DateTime.UtcNow.AddHours(_options.TimeZoneOffset);
+            var scheduledTime = new DateTime(now.Year, now.Month, now.Day, options.ReportTime.Hour, options.ReportTime.Minute, options.ReportTime.Second);
+            if (now > scheduledTime)
+                scheduledTime = scheduledTime.AddDays(1);
+
+            var _ = new Timer(ReportSubreddit, options, scheduledTime - now, TimeSpan.FromDays(1));
+        }
+
+        _client.Ready -= SetUpSubredditReports;
         return Task.CompletedTask;
     }
 
@@ -282,7 +331,7 @@ public class DiscordBotHostedService : IHostedService
         
         foreach (var timeSpan in _timeSpans)
         {
-            var now = DateTime.UtcNow.AddHours(_options.EventReminders.TimeZoneOffset);
+            var now = DateTime.UtcNow.AddHours(_options.TimeZoneOffset);
             if (eventDateTime - now < timeSpan)
                 continue;
             

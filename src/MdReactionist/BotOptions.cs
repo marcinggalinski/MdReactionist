@@ -2,11 +2,13 @@
 
 public class BotOptions
 {
+    public int TimeZoneOffset { get; set; }
     public Logging? Logging { get; set; }
     public EmoteReaction[] EmoteReactions { get; set; } = Array.Empty<EmoteReaction>();
     public Correction[] Corrections { get; set; } = Array.Empty<Correction>();
     public RandomReply[] RandomReplies { get; set; } = Array.Empty<RandomReply>();
     public EventReminders EventReminders { get; set; } = new EventReminders();
+    public SubredditReport[] SubredditReports { get; set; } = Array.Empty<SubredditReport>();
 }
 
 public class Logging
@@ -42,5 +44,13 @@ public class RandomReply
 public class EventReminders
 {
     public ulong[] PermittedUserIds { get; set; } = Array.Empty<ulong>();
-    public int TimeZoneOffset { get; set; }
+}
+
+public class SubredditReport
+{
+    public ulong ChannelId { get; set; }
+    public uint Count { get; set; }
+    public string? Subreddit { get; set; }
+    public TimeOnly ReportTime { get; set; }
+    
 }
