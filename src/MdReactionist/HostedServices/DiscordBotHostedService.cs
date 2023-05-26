@@ -287,6 +287,8 @@ public class DiscordBotHostedService : IHostedService
             var reminder = new EventReminder(msg.Channel.Id, eventName, timeSpan);
             var _ = new Timer(SendEventReminder, reminder, (eventDateTime - DateTime.Now).Subtract(timeSpan), Timeout.InfiniteTimeSpan);
         }
+
+        await msg.AddReactionAsync(new Emoji("✅"));
     }
 
     private record EventReminder(ulong ChannelId, string EventName, TimeSpan RemainingTime);
