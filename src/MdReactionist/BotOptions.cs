@@ -6,6 +6,7 @@ public class BotOptions
     public EmoteReaction[] EmoteReactions { get; set; } = Array.Empty<EmoteReaction>();
     public Correction[] Corrections { get; set; } = Array.Empty<Correction>();
     public RandomReply[] RandomReplies { get; set; } = Array.Empty<RandomReply>();
+    public ulong[] ReminderPermittedUserIds { get; set; } = Array.Empty<ulong>();
 }
 
 public class Logging

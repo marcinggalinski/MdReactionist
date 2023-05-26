@@ -1,6 +1,8 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.Options;
+using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace MdReactionist.HostedServices;
 
@@ -10,9 +12,55 @@ public class DiscordBotHostedService : IHostedService
     private readonly DiscordSocketClient _client;
     private readonly Random _random = new Random();
 
-    private readonly IReadOnlyList<char> _charsToSkip = new []
+    private readonly IReadOnlyCollection<char> _charsToSkip = new []
     {
         '`', '~', '!', '^', '&', '*', '(', ')', '+', '=', ':', ';', ',', '.', '[', ']', '{', '}', '\\', '/', '|'
+    };
+
+    private Regex _eventReminderRegex = new Regex(string.Empty);
+
+    private readonly IReadOnlyCollection<TimeSpan> _timeSpans = new []
+    {
+        TimeSpan.Zero,
+        TimeSpan.FromMinutes(1),
+        TimeSpan.FromMinutes(2),
+        TimeSpan.FromMinutes(3),
+        TimeSpan.FromMinutes(5),
+        TimeSpan.FromMinutes(10),
+        TimeSpan.FromMinutes(20),
+        TimeSpan.FromMinutes(30),
+        TimeSpan.FromMinutes(40),
+        TimeSpan.FromMinutes(50),
+        TimeSpan.FromHours(1),
+        TimeSpan.FromHours(2),
+        TimeSpan.FromHours(3),
+        TimeSpan.FromHours(4),
+        TimeSpan.FromHours(5),
+        TimeSpan.FromHours(6),
+        TimeSpan.FromHours(7),
+        TimeSpan.FromHours(8),
+        TimeSpan.FromHours(9),
+        TimeSpan.FromHours(10),
+        TimeSpan.FromHours(11),
+        TimeSpan.FromHours(12),
+        TimeSpan.FromHours(13),
+        TimeSpan.FromHours(14),
+        TimeSpan.FromHours(15),
+        TimeSpan.FromHours(16),
+        TimeSpan.FromHours(17),
+        TimeSpan.FromHours(18),
+        TimeSpan.FromHours(19),
+        TimeSpan.FromHours(20),
+        TimeSpan.FromHours(21),
+        TimeSpan.FromHours(22),
+        TimeSpan.FromHours(23),
+        TimeSpan.FromDays(1),
+        TimeSpan.FromDays(2),
+        TimeSpan.FromDays(3),
+        TimeSpan.FromDays(4),
+        TimeSpan.FromDays(5),
+        TimeSpan.FromDays(6),
+        TimeSpan.FromDays(7)
     };
 
     public DiscordBotHostedService(IOptions<BotOptions> options)
@@ -27,10 +75,12 @@ public class DiscordBotHostedService : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        _client.Ready += SetUpRegex;
         _client.Ready += LogBotStart;
         _client.MessageReceived += AddReaction;
         _client.MessageReceived += Correct;
         _client.MessageReceived += RandomReply;
+        _client.MessageReceived += ScheduleEventReminders;
 
         var token = Environment.GetEnvironmentVariable("MD_BOT_TOKEN");
         await _client.LoginAsync(TokenType.Bot, token);
@@ -42,12 +92,24 @@ public class DiscordBotHostedService : IHostedService
         _client.MessageReceived -= AddReaction;
         _client.MessageReceived -= Correct;
         _client.MessageReceived -= RandomReply;
+        _client.MessageReceived -= ScheduleEventReminders;
 
         if (_options.Logging is not null)
             await _client.GetGuild(_options.Logging.ServerId).GetTextChannel(_options.Logging.ChannelId).SendMessageAsync("Bot stopped");
 
         await _client.StopAsync();
         await _client.LogoutAsync();
+    }
+
+    private Task SetUpRegex()
+    {
+        var mention = $"@{_client.CurrentUser.Username}#{_client.CurrentUser.DiscriminatorValue}";
+        _eventReminderRegex = new Regex(
+            @$"^{mention} (?<name>\w+) dnia (?<date>\d{{4}}-\d{{2}}-\d{{2}}) o (?<time>\d{{2}}:\d{{2}})$",
+            RegexOptions.Compiled);
+
+        _client.Ready -= LogBotStart;
+        return Task.CompletedTask;
     }
 
     private async Task LogBotStart()
@@ -138,5 +200,95 @@ public class DiscordBotHostedService : IHostedService
             await msg.ReplyAsync(reply);
         }
     }
+
+    private async Task ScheduleEventReminders(SocketMessage message)
+    {
+        async void SendEventReminder(object? state)
+        {
+            if (state is not EventReminder reminder)
+                return;
+
+            if (_client.GetChannel(reminder.ChannelId) is not SocketTextChannel channel)
+                return;
+
+            var text = reminder.RemainingTime.Days switch
+            {
+                <= 7 and >= 2 => $"{reminder.EventName} już za {reminder.RemainingTime.Days} dni!",
+                1 => $"{reminder.EventName} już za 1 dzień!",
+                0 => reminder.RemainingTime.Hours switch
+                {
+                    (<= 24 and >= 22) or (<= 4 and >= 2) => $"{reminder.EventName} już za {reminder.RemainingTime.Days} godziny!",
+                    <= 21 and >= 5 => $"{reminder.EventName} już za {reminder.RemainingTime.Days} godzin!",
+                    1 => $"{reminder.EventName} już za 1 godzinę!",
+                    0 => reminder.RemainingTime.Minutes switch
+                    {
+                        (<= 60 and >= 55) or (<= 50 and >= 45) or (<= 40 and >= 35) or (<= 30 and >= 25) or (<= 20 and >= 5) => $"{reminder.EventName} już za {reminder.RemainingTime.Minutes} minut!",
+                        51 or 41 or 31 or 21 => $"{reminder.EventName} już za {reminder.RemainingTime.Minutes} minut!",
+                        (<= 54 and >= 52) or (<= 44 and >= 42) or (<= 34 and >= 32) or (<= 24 and >= 22) or (<= 4 and >= 2) => $"{reminder.EventName} już za {reminder.RemainingTime.Minutes} minuty!",
+                        1 => $"{reminder.EventName} już za 1 minutę!",
+                        0 => $"It's {reminder.EventName} time! <3",
+                        _ => throw new UnreachableException()
+                    },
+                    _ => throw new UnreachableException()
+                },
+                _ => throw new UnreachableException()
+            };
+
+            await channel.SendMessageAsync(text);
+        }
+        
+        if (message is not SocketUserMessage msg)
+            return;
+
+        if (msg.MentionedUsers.All(x => x.Id != _client.CurrentUser.Id))
+            return;
+
+        if (!_eventReminderRegex.IsMatch(msg.CleanContent))
+            return;
+
+        if (!_options.ReminderPermittedUserIds.Contains(msg.Author.Id))
+        {
+            await msg.ReplyAsync("Rejected.");
+            return;
+        }
+        
+        var match = _eventReminderRegex.Match(msg.CleanContent);
+
+        if (!match.Groups.TryGetValue("name", out var eventNameGroup))
+            return;
+
+        var eventName = eventNameGroup.Value;
+        if (string.IsNullOrWhiteSpace(eventName))
+            return;
+        
+        if (!match.Groups.TryGetValue("date", out var dateStringGroup))
+            return;
+        if (!match.Groups.TryGetValue("time", out var timeStringGroup))
+            return;
+
+        var dateTimeString = $"{dateStringGroup.Value} {timeStringGroup.Value}";
+        if (!DateTime.TryParse(dateTimeString, out var eventDateTime))
+        {
+            await msg.ReplyAsync("Nieprawidłowy format daty i/lub czasu wydarzenia.");
+            return;
+        }
+
+        if (eventDateTime - DateTime.Now > TimeSpan.FromDays(8))
+        {
+            await msg.ReplyAsync("Wydarzenie zbyt odległe.");
+            return;
+        }
+        
+        foreach (var timeSpan in _timeSpans)
+        {
+            if (eventDateTime - DateTime.Now < timeSpan)
+                continue;
+            
+            var reminder = new EventReminder(msg.Channel.Id, eventName, timeSpan);
+            var _ = new Timer(SendEventReminder, reminder, (eventDateTime - DateTime.Now).Subtract(timeSpan), Timeout.InfiniteTimeSpan);
+        }
+    }
+
+    private record EventReminder(ulong ChannelId, string EventName, TimeSpan RemainingTime);
 }
 
