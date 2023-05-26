@@ -74,6 +74,8 @@ public class DiscordBotHostedService : IHostedService
             {
                 GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
             });
+        
+        _http.DefaultRequestHeaders.Add("User-Agent", "MockClient/0.1 by Me");
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -127,17 +129,17 @@ public class DiscordBotHostedService : IHostedService
                 return;
 
             var response = await _http.GetAsync($"https://reddit.com/r/{report.Subreddit}.json");
-            var content = await response.Content.ReadAsStreamAsync();
-            var json = await JsonDocument.ParseAsync(content);
+            var content = await response.Content.ReadAsStringAsync();
+            var json = JsonDocument.Parse(content);
 
             var posts = json.RootElement.GetProperty("data").GetProperty("children");
             for (var i = 0; i < report.Count; i++)
             {
-                var post = posts[i];
-                var title = post.GetProperty("title");
-                var url = post.GetProperty("url");
-                var score = post.GetProperty("score");
-                var author = post.GetProperty("author");
+                var postData = posts[i].GetProperty("data");
+                var title = postData.GetProperty("title").GetString();
+                var url = postData.GetProperty("url").GetString();
+                var score = postData.GetProperty("score").GetInt32();
+                var author = postData.GetProperty("author").GetString();
 
                 var sb = new StringBuilder();
                 sb.AppendLine($"[{score}] **{title}** by {author}");
