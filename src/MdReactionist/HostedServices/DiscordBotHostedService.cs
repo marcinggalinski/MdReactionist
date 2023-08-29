@@ -15,9 +15,19 @@ public class DiscordBotHostedService : IHostedService
     private readonly HttpClient _http = new HttpClient();
     private readonly Random _random = new Random();
 
-    private readonly IReadOnlyCollection<char> _charsToSkip = new []
+    private readonly IReadOnlyCollection<char> _charsToSkipAlways = new []
     {
-        '`', '~', '!', '^', '&', '*', '(', ')', '+', '=', ':', ';', ',', '.', '[', ']', '{', '}', '\\', '/', '|'
+        '`', '~', '!', '@', '#', '$', '^', '&', '*', '(', ')', '+', '=', ':', ';', '"', ',', '<', '.', '>', '[', ']', '{', '}', '\\', '/', '|'
+    };
+
+    private readonly IReadOnlyCollection<char> _charsToSkipIfAtTheBeginning = new []
+    {
+        '\''
+    };
+
+    private readonly IReadOnlyCollection<char> _charsToSkipIfAtTheEnd = new []
+    {
+        '\''
     };
 
     private Regex _eventReminderRegex = new Regex(string.Empty);
@@ -220,13 +230,19 @@ public class DiscordBotHostedService : IHostedService
             var correctionStart = 0;
             var correctionEnd = msg.CleanContent.Length;
 
-            var prevOmitted = msg.CleanContent[..index].LastOrDefault(x => char.IsWhiteSpace(x) || _charsToSkip.Contains(x));
+            var prevOmitted = msg.CleanContent[..index].LastOrDefault(x => char.IsWhiteSpace(x) || _charsToSkipAlways.Contains(x));
             if (prevOmitted != default(char))
                 correctionStart = msg.CleanContent[..index].LastIndexOf(prevOmitted) + 1;
 
-            var nextOmitted = msg.CleanContent[(index + options.StringToCorrect.Length)..].FirstOrDefault(x => char.IsWhiteSpace(x) || _charsToSkip.Contains(x));
+            while (_charsToSkipIfAtTheBeginning.Contains(msg.CleanContent[correctionStart]))
+                correctionStart++;
+
+            var nextOmitted = msg.CleanContent[(index + options.StringToCorrect.Length)..].FirstOrDefault(x => char.IsWhiteSpace(x) || _charsToSkipAlways.Contains(x));
             if (nextOmitted != default(char))
                 correctionEnd = index + msg.CleanContent[index..].IndexOf(nextOmitted);
+
+            while (_charsToSkipIfAtTheEnd.Contains(msg.CleanContent[correctionEnd - 1]))
+                correctionEnd--;
 
             var correctedString = options.BoldCorrection ? $"**{options.CorrectedString}**" : options.CorrectedString;
             var correction = $"*{msg.CleanContent[correctionStart..index]}{correctedString}{msg.CleanContent[(index + options.StringToCorrect.Length)..correctionEnd]}";
